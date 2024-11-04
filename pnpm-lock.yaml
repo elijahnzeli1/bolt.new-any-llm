@@ -80,6 +80,9 @@ importers:
       '@nanostores/react':
         specifier: ^0.7.2
         version: 0.7.2(nanostores@0.10.3)(react@18.3.1)
+      '@octokit/plugin-rest-endpoint-methods':
+        specifier: ^13.2.6
+        version: 13.2.6(@octokit/core@6.1.2)
       '@octokit/rest':
         specifier: ^21.0.2
         version: 21.0.2

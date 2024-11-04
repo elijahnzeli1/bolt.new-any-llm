@@ -34,6 +34,9 @@ export type ActionStateUpdate =
 type ActionsMap = MapStore<Record<string, ActionState>>;
 
 export class ActionRunner {
+  abort() {
+    throw new Error('Method not implemented.');
+  }
   #webcontainer: Promise<WebContainer>;
   #currentExecutionPromise: Promise<void> = Promise.resolve();
 

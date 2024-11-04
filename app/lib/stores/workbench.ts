@@ -12,6 +12,7 @@ import { TerminalStore } from './terminal';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { Octokit } from "@octokit/rest";
+import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 
 export interface ArtifactState {
   id: string;
@@ -25,6 +26,8 @@ export type ArtifactUpdateState = Pick<ArtifactState, 'title' | 'closed'>;
 type Artifacts = MapStore<Record<string, ArtifactState>>;
 
 export type WorkbenchViewType = 'code' | 'preview';
+
+type GitHubRepo = RestEndpointMethodTypes["repos"]["get"]["response"]["data"];
 
 export class WorkbenchStore {
   #previewsStore = new PreviewsStore(webcontainer);
@@ -214,7 +217,15 @@ export class WorkbenchStore {
   }
 
   abortAllActions() {
-    // TODO: what do we wanna do and how do we wanna recover from this?
+    // Abort all ongoing actions for each artifact
+    for (const messageId of this.artifactIdList) {
+        const artifact = this.#getArtifact(messageId);
+        if (artifact) {
+            artifact.runner.abort(); // Assuming the ActionRunner has an abort method
+        }
+    }
+    // Optionally, reset the state of artifacts if needed
+    this.artifacts.set({}); // Clear all artifacts if necessary
   }
 
   addArtifact({ messageId, title, id }: ArtifactCallbackData) {
@@ -351,9 +362,10 @@ export class WorkbenchStore {
       const octokit = new Octokit({ auth: githubToken });
   
       // Check if the repository already exists before creating it
-      let repo
+      let repo: GitHubRepo;
       try {
-        repo = await octokit.repos.get({ owner: owner, repo: repoName });
+        const response = await octokit.repos.get({ owner: owner, repo: repoName });
+        repo = response.data;
       } catch (error) {
         if (error instanceof Error && 'status' in error && error.status === 404) {
           // Repository doesn't exist, so create a new one
@@ -380,8 +392,8 @@ export class WorkbenchStore {
         Object.entries(files).map(async ([filePath, dirent]) => {
           if (dirent?.type === 'file' && dirent.content) {
             const { data: blob } = await octokit.git.createBlob({
-              owner: repo.data.owner.login,
-              repo: repo.data.name,
+              owner: repo.owner.login,
+              repo: repo.name,
               content: Buffer.from(dirent.content).toString('base64'),
               encoding: 'base64',
             });
@@ -398,16 +410,16 @@ export class WorkbenchStore {
   
       // Get the latest commit SHA (assuming main branch, update dynamically if needed)
       const { data: ref } = await octokit.git.getRef({
-        owner: repo.data.owner.login,
-        repo: repo.data.name,
-        ref: `heads/${repo.data.default_branch || 'main'}`,
+        owner: repo.owner.login,
+        repo: repo.name,
+        ref: `heads/${repo.default_branch || 'main'}`,
       });
       const latestCommitSha = ref.object.sha;
   
       // Create a new tree
       const { data: newTree } = await octokit.git.createTree({
-        owner: repo.data.owner.login,
-        repo: repo.data.name,
+        owner: repo.owner.login,
+        repo: repo.name,
         base_tree: latestCommitSha,
         tree: validBlobs.map((blob) => ({
           path: blob!.path,
@@ -419,8 +431,8 @@ export class WorkbenchStore {
   
       // Create a new commit
       const { data: newCommit } = await octokit.git.createCommit({
-        owner: repo.data.owner.login,
-        repo: repo.data.name,
+        owner: repo.owner.login,
+        repo: repo.name,
         message: 'Initial commit from your app',
         tree: newTree.sha,
         parents: [latestCommitSha],
@@ -428,9 +440,9 @@ export class WorkbenchStore {
   
       // Update the reference
       await octokit.git.updateRef({
-        owner: repo.data.owner.login,
-        repo: repo.data.name,
-        ref: `heads/${repo.data.default_branch || 'main'}`,
+        owner: repo.owner.login,
+        repo: repo.name,
+        ref: `heads/${repo.default_branch || 'main'}`,
         sha: newCommit.sha,
       });
   
@@ -448,34 +460,36 @@ export class WorkbenchStore {
       this.modifiedFiles.clear();
       
       // Function to recursively read directory contents
-      async function* getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path = ''): AsyncGenerator<[string, File]> {
+      async function* getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path = ''): AsyncGenerator<[string, CustomFile]> {
         for await (const entry of dirHandle.values()) {
           const entryPath = `${path}/${entry.name}`;
           
           if (entry.kind === 'file') {
-            const file = await entry.getFile();
+            const file = await (entry as FileSystemFileHandle).getFile();
             const content = await file.text();
             yield [`/home/project${entryPath}`, {
               type: 'file',
               content,
-              isBinary: false // You might want to add binary detection here
-            }];
+              isBinary: false,
+              name: file.name,
+              lastModified: file.lastModified,
+              size: file.size
+            } as CustomFile];
           } else if (entry.kind === 'directory') {
-            const newHandle = await dirHandle.getDirectoryHandle(entry.name);
-            yield* getFilesRecursively(newHandle, entryPath);
+            yield* getFilesRecursively(await dirHandle.getDirectoryHandle(entry.name), entryPath);
           }
         }
       }
 
       // Read all files and add them to the store
-      const files: Record<string, File> = {};
+      const files: Record<string, { type: 'file'; content: string; isBinary: boolean }> = {};
       for await (const [path, file] of getFilesRecursively(directoryHandle)) {
         files[path] = file;
       }
 
       // Update the file store
-      this.#filesStore.files.set(files);
-      this.setDocuments(files);
+      this.#filesStore.files.set(files as FileMap);
+      this.setDocuments(files as FileMap);
 
       return true;
     } catch (error) {
