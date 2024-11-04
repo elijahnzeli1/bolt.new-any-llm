@@ -17,3 +17,23 @@
 .Chat {
   opacity: 1;
 }
+
+.textarea {
+  min-height: 76px;
+  max-height: 400px;
+  
+  &.defaultHeight {
+    max-height: 200px;
+  }
+}
+ // Start of Selection
+.examplePrompts {
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 180%);
+  mask-image: linear-gradient(to bottom, black 0%, transparent 180%);
+  
+  &:hover {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+// End of Selection

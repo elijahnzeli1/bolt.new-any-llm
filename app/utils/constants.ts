@@ -64,28 +64,16 @@ async function getOllamaModels(): Promise<ModelInfo[]> {
 }
 
 async function getOpenAILikeModels(): Promise<ModelInfo[]> {
- try {
-   const base_url =import.meta.env.OPENAI_LIKE_API_BASE_URL || "";
-   if (!base_url) {
-      return [];
-   }
-   const api_key = import.meta.env.OPENAI_LIKE_API_KEY ?? "";
-   const response = await fetch(`${base_url}/models`, {
-     headers: {
-       Authorization: `Bearer ${api_key}`,
-     }
-   });
-    const res = await response.json() as any;
-    return res.data.map((model: any) => ({
-      name: model.id,
-      label: model.id,
-      provider: 'OpenAILike',
-    }));
- }catch (e) {
-   return []
- }
-
+  // Instead of fetching, return the known Groq models
+  const groqModels = [
+    { name: 'llama2-70b-4096', label: 'LLaMA2 70B (Groq)', provider: 'OpenAILike' },
+    { name: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (Groq)', provider: 'OpenAILike' },
+    { name: 'gemma-7b-it', label: 'Gemma 7B (Groq)', provider: 'OpenAILike' },
+  ];
+  
+  return groqModels;
 }
+
 async function initializeModelList(): Promise<void> {
   const ollamaModels = await getOllamaModels();
   const openAiLikeModels = await getOpenAILikeModels();

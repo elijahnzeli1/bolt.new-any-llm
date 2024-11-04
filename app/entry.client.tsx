@@ -1,7 +1,16 @@
 import { RemixBrowser } from '@remix-run/react';
-import { startTransition } from 'react';
-import { hydrateRoot } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
+import { startTransition, StrictMode } from 'react';
+
+const container = document.getElementById('root');
+if (!container) throw new Error('Root element not found');
+
+const root = createRoot(container);
 
 startTransition(() => {
-  hydrateRoot(document.getElementById('root')!, <RemixBrowser />);
+  root.render(
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
+  );
 });

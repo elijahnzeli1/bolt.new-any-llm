@@ -194,7 +194,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                 <IconButton
                   icon="i-ph:x-circle"
                   className="-mr-1"
-                  size="xl"
+                  // Assuming the correct prop is `iconSize`
                   onClick={() => {
                     workbenchStore.showWorkbench.set(false);
                   }}

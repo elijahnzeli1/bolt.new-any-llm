@@ -11,6 +11,7 @@ import { MODEL_LIST, DEFAULT_PROVIDER } from '~/utils/constants';
 import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
 import { useState } from 'react';
+import { LoadProjectIcon } from '~/components/workbench/LoadProjectIcon';
 
 import styles from './BaseChat.module.scss';
 
@@ -66,7 +67,10 @@ const ModelSelector = ({ model, setModel, modelList, providerList }) => {
   );
 };
 
-const TEXTAREA_MIN_HEIGHT = 76;
+// Remove these constants as they're now in CSS
+// const TEXTAREA_MIN_HEIGHT = 76;
+// const TEXTAREA_MAX_HEIGHT_CHAT = 400;
+// const TEXTAREA_MAX_HEIGHT_DEFAULT = 200;
 
 interface BaseChatProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement> | undefined;
@@ -109,7 +113,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     },
     ref,
   ) => {
-    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
     return (
       <div
@@ -163,20 +166,23 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 />
                 <div
                   className={classNames(
-                    'shadow-sm border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden',
+                    'shadow-sm border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden relative'
                   )}
                 >
+                  <LoadProjectIcon />
                   <textarea
                     ref={textareaRef}
-                    className="w-full pl-4 pt-4 pr-16 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent min-h-[${TEXTAREA_MIN_HEIGHT}] max-h-[${TEXTAREA_MAX_HEIGHT}]"
+                    className={classNames(
+                      "w-full pl-4 pt-4 pr-24 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent",
+                      styles.textarea,
+                      { [styles.defaultHeight]: !chatStarted }
+                    )}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         if (event.shiftKey) {
                           return;
                         }
-
                         event.preventDefault();
-
                         sendMessage?.(event);
                       }
                     }}
@@ -197,7 +203,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             handleStop?.();
                             return;
                           }
-
                           sendMessage?.(event);
                         }}
                       />
@@ -240,7 +245,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             </div>
             {!chatStarted && (
               <div id="examples" className="relative w-full max-w-xl mx-auto mt-8 flex justify-center">
-                <div className="flex flex-col space-y-2 [mask-image:linear-gradient(to_bottom,black_0%,transparent_180%)] hover:[mask-image:none]">
+                <div className={classNames("flex flex-col space-y-2", styles.examplePrompts)}>
                   {EXAMPLE_PROMPTS.map((examplePrompt, index) => {
                     return (
                       <button
