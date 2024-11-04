@@ -75,7 +75,7 @@ export const FileTree = memo(
       for (const fileOrFolder of fileList) {
         const depth = fileOrFolder.depth;
 
-        // if the depth is equal we reached the end of the collaped group
+        // if the depth is equal we reached the end of the collapsed group
         if (lastDepth === depth) {
           lastDepth = Number.MAX_SAFE_INTEGER;
         }
@@ -141,7 +141,7 @@ export const FileTree = memo(
               );
             }
             default: {
-              return undefined;
+              return null;
             }
           }
         })}
@@ -220,14 +220,23 @@ interface ButtonProps {
 }
 
 function NodeButton({ depth, iconClasses, onClick, className, children }: ButtonProps) {
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const paddingLeft = `pl-${6 + depth * NODE_PADDING_LEFT}`; // Tailwind CSS utility for padding-left
+
   return (
     <button
+      type="button"
       className={classNames(
         'flex items-center gap-1.5 w-full pr-2 border-2 border-transparent text-faded py-0.5',
         className,
+        paddingLeft
       )}
-      style={{ paddingLeft: `${6 + depth * NODE_PADDING_LEFT}px` }}
-      onClick={() => onClick?.()}
+      onClick={handleClick}
     >
       <div className={classNames('scale-120 shrink-0', iconClasses)}></div>
       <div className="truncate w-full text-left">{children}</div>

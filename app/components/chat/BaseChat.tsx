@@ -29,6 +29,7 @@ const ModelSelector = ({ model, setModel, modelList, providerList }) => {
   return (
     <div className="mb-2">
       <select
+        aria-label="Select a provider"
         value={provider}
         onChange={(e) => {
           setProvider(e.target.value);
@@ -50,6 +51,7 @@ const ModelSelector = ({ model, setModel, modelList, providerList }) => {
         </option>
       </select>
       <select
+        aria-label="Select a model"
         value={model}
         onChange={(e) => setModel(e.target.value)}
         className="w-full p-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background text-bolt-elements-textPrimary focus:outline-none"
@@ -166,7 +168,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 >
                   <textarea
                     ref={textareaRef}
-                    className={`w-full pl-4 pt-4 pr-16 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent`}
+                    className="w-full pl-4 pt-4 pr-16 focus:outline-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent min-h-[${TEXTAREA_MIN_HEIGHT}] max-h-[${TEXTAREA_MAX_HEIGHT}]"
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         if (event.shiftKey) {
@@ -181,10 +183,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     value={input}
                     onChange={(event) => {
                       handleInputChange?.(event);
-                    }}
-                    style={{
-                      minHeight: TEXTAREA_MIN_HEIGHT,
-                      maxHeight: TEXTAREA_MAX_HEIGHT,
                     }}
                     placeholder="How can Bolt help you today?"
                     translate="no"

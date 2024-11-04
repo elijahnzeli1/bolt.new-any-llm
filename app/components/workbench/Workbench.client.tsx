@@ -16,6 +16,7 @@ import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
 import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
+import { LoadProjectButton } from './LoadProjectButton';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
@@ -140,6 +141,7 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                 <div className="ml-auto" />
                 {selectedView === 'code' && (
                   <>
+                    <LoadProjectButton />
                     <PanelHeaderButton
                       className="mr-1 text-sm"
                       onClick={() => {

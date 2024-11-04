@@ -380,8 +380,8 @@ export class WorkbenchStore {
         Object.entries(files).map(async ([filePath, dirent]) => {
           if (dirent?.type === 'file' && dirent.content) {
             const { data: blob } = await octokit.git.createBlob({
-              owner: repo.owner.login,
-              repo: repo.name,
+              owner: repo.data.owner.login,
+              repo: repo.data.name,
               content: Buffer.from(dirent.content).toString('base64'),
               encoding: 'base64',
             });
@@ -398,16 +398,16 @@ export class WorkbenchStore {
   
       // Get the latest commit SHA (assuming main branch, update dynamically if needed)
       const { data: ref } = await octokit.git.getRef({
-        owner: repo.owner.login,
-        repo: repo.name,
-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
+        owner: repo.data.owner.login,
+        repo: repo.data.name,
+        ref: `heads/${repo.data.default_branch || 'main'}`,
       });
       const latestCommitSha = ref.object.sha;
   
       // Create a new tree
       const { data: newTree } = await octokit.git.createTree({
-        owner: repo.owner.login,
-        repo: repo.name,
+        owner: repo.data.owner.login,
+        repo: repo.data.name,
         base_tree: latestCommitSha,
         tree: validBlobs.map((blob) => ({
           path: blob!.path,
@@ -419,8 +419,8 @@ export class WorkbenchStore {
   
       // Create a new commit
       const { data: newCommit } = await octokit.git.createCommit({
-        owner: repo.owner.login,
-        repo: repo.name,
+        owner: repo.data.owner.login,
+        repo: repo.data.name,
         message: 'Initial commit from your app',
         tree: newTree.sha,
         parents: [latestCommitSha],
@@ -428,15 +428,59 @@ export class WorkbenchStore {
   
       // Update the reference
       await octokit.git.updateRef({
-        owner: repo.owner.login,
-        repo: repo.name,
-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
+        owner: repo.data.owner.login,
+        repo: repo.data.name,
+        ref: `heads/${repo.data.default_branch || 'main'}`,
         sha: newCommit.sha,
       });
   
       alert(`Repository created and code pushed: ${repo.html_url}`);
     } catch (error) {
       console.error('Error pushing to GitHub:', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async loadLocalProject(directoryHandle: FileSystemDirectoryHandle) {
+    try {
+      // Clear existing files and state
+      this.#filesStore.files.set({});
+      this.unsavedFiles.set(new Set());
+      this.modifiedFiles.clear();
+      
+      // Function to recursively read directory contents
+      async function* getFilesRecursively(dirHandle: FileSystemDirectoryHandle, path = ''): AsyncGenerator<[string, File]> {
+        for await (const entry of dirHandle.values()) {
+          const entryPath = `${path}/${entry.name}`;
+          
+          if (entry.kind === 'file') {
+            const file = await entry.getFile();
+            const content = await file.text();
+            yield [`/home/project${entryPath}`, {
+              type: 'file',
+              content,
+              isBinary: false // You might want to add binary detection here
+            }];
+          } else if (entry.kind === 'directory') {
+            const newHandle = await dirHandle.getDirectoryHandle(entry.name);
+            yield* getFilesRecursively(newHandle, entryPath);
+          }
+        }
+      }
+
+      // Read all files and add them to the store
+      const files: Record<string, File> = {};
+      for await (const [path, file] of getFilesRecursively(directoryHandle)) {
+        files[path] = file;
+      }
+
+      // Update the file store
+      this.#filesStore.files.set(files);
+      this.setDocuments(files);
+
+      return true;
+    } catch (error) {
+      console.error('Error loading local project:', error);
+      throw error;
     }
   }
 }
